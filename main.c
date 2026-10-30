@@ -62,5 +62,10 @@ int main(int argc, char **argv)
             get_second_dongle(i, sim.nb_coders) + 1);
         i++;
     }
+    if (create_queue(&sim) != 0)
+    {
+        destroy_mutexes(&sim);
+        return 1;
+    }
     return (0);
 }

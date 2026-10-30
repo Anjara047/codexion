@@ -66,6 +66,7 @@ typedef struct s_sim
     pthread_mutex_t queue_mutex;
     pthread_cond_t  queue_cond;
     int             stop;
+    long            next_arrival;
 }   t_sim;
 
 typedef enum state_dongle
@@ -97,5 +98,6 @@ void        destroy_mutexes(t_sim *sim);
 void        destroy_dongles(t_dongle *dongles, int nb_coders);
 int         get_first_dongle(int coder_id);
 int         get_second_dongle(int coder_id, int nb_coders);
+int         create_queue(t_sim *sim);
 
 #endif
