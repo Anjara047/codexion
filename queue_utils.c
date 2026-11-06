@@ -52,39 +52,29 @@ int add_queue(t_sim *sim, t_coder *coder)
     return (0);
 }
 
-
 int queue_pop(t_sim *sim, t_request *request)
 {
-    int i;
-    int right;
+    int selected;
 
     pthread_mutex_lock(&sim->queue_mutex);
-    while (sim->queue.size == 0 && !sim->stop)
-        pthread_cond_wait(&sim->queue_cond, &sim->queue_mutex);
-    if (sim->stop)
+    while (!sim->stop)
     {
-        pthread_mutex_unlock(&sim->queue_mutex);
-        return (1);
-    }
-    right = 0;
-    if (sim->scheduler == edf)
-    {
-        i = 1;
-        while (i < sim->queue.size)
+        while (sim->queue.size == 0 && !sim->stop)
+            pthread_cond_wait(&sim->queue_cond, &sim->queue_mutex);
+        if (sim->stop)
+            break;
+        if (sim->scheduler == edf)
+            manage_edf(&sim->queue);
+        selected = try_to_find_available_dongles(sim);
+        if (selected != -1)
         {
-            if (sim->queue.requests[i].deadline < sim->queue.requests[right].deadline)
-                right = i;
-            i++;
+            *request = sim->queue.requests[selected];
+            remove_queue_request(&sim->queue, selected);
+            pthread_mutex_unlock(&sim->queue_mutex);
+            return (0);
         }
+        pthread_cond_wait(&sim->queue_cond, &sim->queue_mutex);
     }
-    *request = sim->queue.requests[right];
-    i = right;
-    while (i < sim->queue.size - 1)
-    {
-        sim->queue.requests[i] = sim->queue.requests[i + 1];
-        i++;
-    }
-    sim->queue.size--;
     pthread_mutex_unlock(&sim->queue_mutex);
-    return (0);
+    return (1);
 }

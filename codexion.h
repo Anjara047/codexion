@@ -117,5 +117,8 @@ int         add_queue(t_sim *sim, t_coder *coders);
 int         queue_pop(t_sim *sim, t_request *request);
 int         trying_to_take_dongles(t_sim *sim, t_coder *coder);
 void        realising_dongle(t_sim *sim, t_coder *coder);
+void manage_edf(t_queue *queue);
+int  try_to_find_available_dongles(t_sim *sim);
+void remove_queue_request(t_queue *queue, int index);
 
 #endif

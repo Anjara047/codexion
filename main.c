@@ -1,3 +1,4 @@
+
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
@@ -10,8 +11,6 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-
-
 #include "codexion.h"
 
 int main(int argc, char **argv)
@@ -19,6 +18,7 @@ int main(int argc, char **argv)
     t_sim       sim;
     t_dongle    *dongles;
     t_coder     *coders;
+    t_request   request;
     int         i;
 
     if (!validate_paramaters(argc, argv, &sim))
@@ -62,44 +62,72 @@ int main(int argc, char **argv)
         return (1);
     }
     create_coders(coders, sim.nb_coders, sim.start_time);
-
-    printf("\n--- test resa ---\n");
-    printf("Coder 1: %s\n",
-        trying_to_take_dongles(&sim, &coders[0]) == 0
-            ? "SUCCESS" : "UNAVAILABLE");
-    printf("Coder 2: %s\n",
-        trying_to_take_dongles(&sim, &coders[1]) == 0
-            ? "SUCCESS" : "UNAVAILABLE");
-
-    printf("\n--- release before ---\n");
+    printf("\n--- ADD REQUESTS TO QUEUE ---\n");
     i = 0;
     while (i < sim.nb_coders)
     {
-        printf("Dongle %d: %s\n",
-            dongles[i].dongle_id,
-            dongles[i].state == AVAILABLE
-                ? "AVAILABLE" : "UNAVAILABLE");
+        if (add_queue(&sim, &coders[i]) != 0)
+            printf("Failed to add Coder %d\n", coders[i].coder_id);
+        else
+            printf("Added Coder %d\n", coders[i].coder_id);
         i++;
     }
 
-    printf("\nReleasing Coder 1 dongles...\n");
-    realising_dongle(&sim, &coders[0]);
+    printf("\nQueue size: %d\n", sim.queue.size);
 
-    printf("\n--- realese after ---\n");
-    i = 0;
-    while (i < sim.nb_coders)
+    if (sim.nb_coders == 1)
     {
-        printf("Dongle %d: %s\n",
-            dongles[i].dongle_id,
-            dongles[i].state == AVAILABLE
-                ? "AVAILABLE" : "UNAVAILABLE");
-        i++;
+        printf("\n--- ONE CODER TEST ---\n");
+        printf("Coder 1: %s\n",
+            trying_to_take_dongles(&sim, &coders[0]) == 0
+                ? "SUCCESS" : "UNAVAILABLE");
+        printf("No scheduler selection: only one dongle is available.\n");
     }
+    else if (sim.nb_coders == 2)
+    {
+        printf("\n--- TWO CODERS TEST ---\n");
+        printf("Coder 1: %s\n",
+            trying_to_take_dongles(&sim, &coders[0]) == 0
+                ? "SUCCESS" : "UNAVAILABLE");
 
-    printf("\n--- CODER 2 RETRY ---\n");
-    printf("Coder 2: %s\n",
-        trying_to_take_dongles(&sim, &coders[1]) == 0
-            ? "SUCCESS" : "UNAVAILABLE");
+        printf("Releasing Coder 1 dongles...\n");
+        realising_dongle(&sim, &coders[0]);
+
+        printf("\n--- SCHEDULER SELECTION ---\n");
+        if (queue_pop(&sim, &request) == 0)
+        {
+            printf("Selected Coder: %d\n", request.coder->coder_id);
+            printf("Remaining requests: %d\n", sim.queue.size);
+        }
+        else
+            printf("No request selected\n");
+    }
+    else
+    {
+        printf("\n--- RESERVE CODER 1 ---\n");
+        trying_to_take_dongles(&sim, &coders[0]);
+
+        printf("\n--- FIRST SCHEDULER SELECTION ---\n");
+        if (queue_pop(&sim, &request) == 0)
+        {
+            printf("Selected Coder: %d\n", request.coder->coder_id);
+            printf("Remaining requests: %d\n", sim.queue.size);
+        }
+        else
+            printf("No request selected\n");
+
+        printf("\n--- RELEASE CODER 1 ---\n");
+        realising_dongle(&sim, &coders[0]);
+
+        printf("\n--- SECOND SCHEDULER SELECTION ---\n");
+        if (queue_pop(&sim, &request) == 0)
+        {
+            printf("Selected Coder: %d\n", request.coder->coder_id);
+            printf("Remaining requests: %d\n", sim.queue.size);
+        }
+        else
+            printf("No request selected\n");
+    }
 
     free(coders);
     destroy_dongles(dongles, sim.nb_coders);
@@ -108,5 +136,3 @@ int main(int argc, char **argv)
     destroy_mutexes(&sim);
     return (0);
 }
-
-
