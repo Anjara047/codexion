@@ -44,7 +44,7 @@ int validate_paramaters(int argc, char **argv, t_sim *sim)
         exit(0);
     }
     parameters_valid(argv[1], &sim->nb_coders);
-    if (sim->nb_coders < 0)
+    if (sim->nb_coders <= 0)
     {
         print("number_of_coders must be a valid integer\n");
         exit(1);

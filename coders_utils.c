@@ -12,22 +12,22 @@
 
 #include "codexion.h"
 
-t_coder *allocate_coders(int nb_coders)
+t_coder	*allocate_coders(int nb_coders)
 {
-	t_coder *coders;
+	t_coder	*coders;
 
 	coders = malloc(sizeof(t_coder) * nb_coders);
 	if (!coders)
-		return NULL;
+		return (NULL);
 	return (coders);
 }
 
-void create_coders(t_coder *coders, int nb_coders, t_time start_time)
+void	create_coders(t_coder *coders, int nb_coders, t_time start_time)
 {
 	int i;
 
 	i = 0;
-	while(i < nb_coders)
+	while (i < nb_coders)
 	{
 		coders[i].coder_id = i + 1;
 		coders[i].compile_count = 0;
