@@ -22,9 +22,9 @@ t_coder	*allocate_coders(int nb_coders)
 	return (coders);
 }
 
-void	create_coders(t_coder *coders, int nb_coders, t_time start_time)
+int	create_coders(t_coder *coders, int nb_coders, t_time start_time)
 {
-	int i;
+	int	i;
 
 	i = 0;
 	while (i < nb_coders)
@@ -33,6 +33,33 @@ void	create_coders(t_coder *coders, int nb_coders, t_time start_time)
 		coders[i].compile_count = 0;
 		coders[i].last_cmpl = start_time;
 		coders[i].state = WAITING;
+		coders[i].selected = 0;
+		if (pthread_cond_init(&coders[i].scheduler_cond, NULL) != 0)
+		{
+			while (i > 0)
+			{
+				i--;
+				pthread_cond_destroy(&coders[i].scheduler_cond);
+			}
+			return (1);
+		}
 		i++;
 	}
+	return (0);
+}
+
+void coder_selection(t_sim *sim, t_coder *coder)
+{
+    pthread_mutex_lock(&sim->scheduler_mutex);
+    sim->acquired = 0;
+    coder->selected = 1;
+	printf("Scheduler: selecting Coder %d\n", coder->coder_id);
+    pthread_cond_signal(&coder->scheduler_cond);
+    while (!sim->acquired && !sim->stop)
+    {
+        pthread_cond_wait(&sim->scheduler_cond,
+            &sim->scheduler_mutex);
+    }
+	printf("Scheduler: Coder %d acquired confirmation\n", coder->coder_id);
+    pthread_mutex_unlock(&sim->scheduler_mutex);
 }

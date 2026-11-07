@@ -41,10 +41,12 @@ typedef enum state_coder
 
 typedef struct s_coder
 {
-    int     coder_id;
-    int     compile_count;
-    t_time  last_cmpl;
-    t_state_coder state;
+    int             coder_id;
+    int             compile_count;
+    t_time          last_cmpl;
+    t_state_coder   state;
+    int             selected;
+    pthread_cond_t  scheduler_cond;
 }           t_coder;
 
 typedef struct s_request
@@ -89,13 +91,24 @@ typedef struct s_sim
     t_queue         queue;
     t_dongle       *dongles;
     pthread_mutex_t dongles_mutex;
+    pthread_cond_t  dongles_cond;
     pthread_mutex_t log_mutex;
     pthread_mutex_t stop_mutex;
     pthread_mutex_t queue_mutex;
+    pthread_mutex_t scheduler_mutex;
+    pthread_cond_t  scheduler_cond;
     pthread_cond_t  queue_cond;
+    int             selected_coder;
+    int             acquired;
     int             stop;
     long            next_arrival;
 }   t_sim;
+
+typedef struct s_args
+{
+    t_sim   *sim;
+    t_coder *coder;
+}t_args;
 
 void        parameters_valid(char *param, int *dest);
 int         validate_paramaters(int argc, char **argv, t_sim *sim);
@@ -103,7 +116,7 @@ int         main(int argc, char **argv);
 void        print(const char *mess);
 void        sleeping(long time_in_ms);
 t_coder     *allocate_coders(int nb_coders);
-void        create_coders(t_coder *coders, int nb_coders, t_time start_time);
+int         create_coders(t_coder *coders, int nb_coders, t_time start_time);
 int         create_dongles(t_dongle *dongles, int nb_coders);
 t_dongle    *allocate_dongles(int nb_coders);
 void        *routine(void *args);
@@ -117,8 +130,14 @@ int         add_queue(t_sim *sim, t_coder *coders);
 int         queue_pop(t_sim *sim, t_request *request);
 int         trying_to_take_dongles(t_sim *sim, t_coder *coder);
 void        realising_dongle(t_sim *sim, t_coder *coder);
-void manage_edf(t_queue *queue);
-int  try_to_find_available_dongles(t_sim *sim);
-void remove_queue_request(t_queue *queue, int index);
+void        manage_edf(t_queue *queue);
+int         try_to_find_available_dongles(t_sim *sim);
+void        remove_queue_request(t_queue *queue, int index);
+void        waiting_selection(t_sim *sim, t_coder *coder);
+void        coder_selection(t_sim *sim, t_coder *coder);
+void        *scheduler_routine(void *args);
+void        compiles(t_sim *sim, t_coder *coder);
+void        debug(t_sim *sim, t_coder *coder);
+void        refactor(t_sim *sim, t_coder *coder);
 
 #endif

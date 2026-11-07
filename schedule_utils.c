@@ -19,20 +19,26 @@ int trying_to_take_dongles(t_sim *sim, t_coder *coder)
 
     left = get_first_dongle(coder->coder_id);
     right = get_second_dongle(coder->coder_id, sim->nb_coders);
-    pthread_mutex_lock(&sim->dongles_mutex);
     if (sim->nb_coders == 1)
-    {
-        sim->dongles[left].state = UNAVAILABLE;
-        return(1);
-    }
-    if (sim->dongles[left].state == UNAVAILABLE || sim->dongles[right].state == UNAVAILABLE)
+        return (1);
+    pthread_mutex_lock(&sim->dongles_mutex);
+    while ((sim->dongles[left].state == UNAVAILABLE
+            || sim->dongles[right].state == UNAVAILABLE)
+        && !sim->stop)
+        pthread_cond_wait(&sim->dongles_cond, &sim->dongles_mutex);
+    if (sim->stop)
     {
         pthread_mutex_unlock(&sim->dongles_mutex);
         return (1);
     }
     sim->dongles[left].state = UNAVAILABLE;
     sim->dongles[right].state = UNAVAILABLE;
+    printf("Coder %d: acquired both dongles\n", coder->coder_id);
     pthread_mutex_unlock(&sim->dongles_mutex);
+    pthread_mutex_lock(&sim->scheduler_mutex);
+    sim->acquired = 1;
+    pthread_cond_signal(&sim->scheduler_cond);
+    pthread_mutex_unlock(&sim->scheduler_mutex);
     return (0);
 }
 
@@ -52,16 +58,31 @@ void realising_dongle(t_sim *sim, t_coder *coder)
     left = get_first_dongle(coder->coder_id);
     right = get_second_dongle(coder->coder_id, sim->nb_coders);
     pthread_mutex_lock(&sim->dongles_mutex);
-    if (sim->nb_coders == 1)
-    {
-        sim->dongles[left].state = UNAVAILABLE;
-    }
     sim->dongles[left].state = AVAILABLE;
     sim->dongles[right].state = AVAILABLE;
-    if(clock_gettime(CLOCK_MONOTONIC, &sim->dongles[left].last_release.start_time) != 0)
+    printf("Coder %d: released both dongles\n", coder->coder_id);
+    if (clock_gettime(CLOCK_MONOTONIC,
+            &sim->dongles[left].last_release.start_time) != 0)
         print("failure in clock_gettime");
-    if(clock_gettime(CLOCK_MONOTONIC, &sim->dongles[right].last_release.start_time) != 0)
+    if (clock_gettime(CLOCK_MONOTONIC,
+            &sim->dongles[right].last_release.start_time) != 0)
         print("failure in clock_gettime");
+    pthread_cond_signal(&sim->dongles_cond);
     pthread_mutex_unlock(&sim->dongles_mutex);
+}
 
+void    *scheduler_routine(void *args)
+{
+    t_sim       *sim;
+    t_request   request;
+
+    sim = (t_sim *)args;
+//    while (!sim->stop)
+    while (1)
+    {
+        if (queue_pop(sim, &request) != 0)
+            break;
+        coder_selection(sim, request.coder);
+    }
+    return (NULL);
 }

@@ -11,6 +11,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+
 #include "codexion.h"
 
 int main(int argc, char **argv)
@@ -18,7 +19,9 @@ int main(int argc, char **argv)
     t_sim       sim;
     t_dongle    *dongles;
     t_coder     *coders;
-    t_request   request;
+    t_args      *args;
+    pthread_t   *threads;
+    pthread_t   scheduler_thread;
     int         i;
 
     if (!validate_paramaters(argc, argv, &sim))
@@ -61,74 +64,59 @@ int main(int argc, char **argv)
         destroy_mutexes(&sim);
         return (1);
     }
-    create_coders(coders, sim.nb_coders, sim.start_time);
-    printf("\n--- ADD REQUESTS TO QUEUE ---\n");
+    if (create_coders(coders, sim.nb_coders, sim.start_time) != 0)
+    {
+        free(coders);
+        destroy_dongles(dongles, sim.nb_coders);
+        free(dongles);
+        free(sim.queue.requests);
+        destroy_mutexes(&sim);
+        return (1);
+    }
+    threads = malloc(sizeof(pthread_t) * sim.nb_coders);
+    args = malloc(sizeof(t_args) * sim.nb_coders);
+    if (!threads || !args)
+    {
+        free(threads);
+        free(args);
+        i = 0;
+        while (i < sim.nb_coders)
+            pthread_cond_destroy(&coders[i++].scheduler_cond);
+        free(coders);
+        destroy_dongles(dongles, sim.nb_coders);
+        free(dongles);
+        free(sim.queue.requests);
+        destroy_mutexes(&sim);
+        return (1);
+    }
+    if (pthread_create(&scheduler_thread, NULL,
+            scheduler_routine, &sim) != 0)
+        return (1);
     i = 0;
     while (i < sim.nb_coders)
     {
-        if (add_queue(&sim, &coders[i]) != 0)
-            printf("Failed to add Coder %d\n", coders[i].coder_id);
-        else
-            printf("Added Coder %d\n", coders[i].coder_id);
+        args[i].sim = &sim;
+        args[i].coder = &coders[i];
+        if (pthread_create(&threads[i], NULL, routine, &args[i]) != 0)
+            return (1);
         i++;
     }
-
-    printf("\nQueue size: %d\n", sim.queue.size);
-
-    if (sim.nb_coders == 1)
+    i = 0;
+    while (i < sim.nb_coders)
     {
-        printf("\n--- ONE CODER TEST ---\n");
-        printf("Coder 1: %s\n",
-            trying_to_take_dongles(&sim, &coders[0]) == 0
-                ? "SUCCESS" : "UNAVAILABLE");
-        printf("No scheduler selection: only one dongle is available.\n");
+        pthread_join(threads[i], NULL);
+        i++;
     }
-    else if (sim.nb_coders == 2)
-    {
-        printf("\n--- TWO CODERS TEST ---\n");
-        printf("Coder 1: %s\n",
-            trying_to_take_dongles(&sim, &coders[0]) == 0
-                ? "SUCCESS" : "UNAVAILABLE");
-
-        printf("Releasing Coder 1 dongles...\n");
-        realising_dongle(&sim, &coders[0]);
-
-        printf("\n--- SCHEDULER SELECTION ---\n");
-        if (queue_pop(&sim, &request) == 0)
-        {
-            printf("Selected Coder: %d\n", request.coder->coder_id);
-            printf("Remaining requests: %d\n", sim.queue.size);
-        }
-        else
-            printf("No request selected\n");
-    }
-    else
-    {
-        printf("\n--- RESERVE CODER 1 ---\n");
-        trying_to_take_dongles(&sim, &coders[0]);
-
-        printf("\n--- FIRST SCHEDULER SELECTION ---\n");
-        if (queue_pop(&sim, &request) == 0)
-        {
-            printf("Selected Coder: %d\n", request.coder->coder_id);
-            printf("Remaining requests: %d\n", sim.queue.size);
-        }
-        else
-            printf("No request selected\n");
-
-        printf("\n--- RELEASE CODER 1 ---\n");
-        realising_dongle(&sim, &coders[0]);
-
-        printf("\n--- SECOND SCHEDULER SELECTION ---\n");
-        if (queue_pop(&sim, &request) == 0)
-        {
-            printf("Selected Coder: %d\n", request.coder->coder_id);
-            printf("Remaining requests: %d\n", sim.queue.size);
-        }
-        else
-            printf("No request selected\n");
-    }
-
+    pthread_mutex_lock(&sim.queue_mutex);
+    sim.stop = 1;
+    pthread_cond_signal(&sim.queue_cond);
+    pthread_mutex_unlock(&sim.queue_mutex);
+    pthread_join(scheduler_thread, NULL);
+    i = 0;
+    while (i < sim.nb_coders)
+        pthread_cond_destroy(&coders[i++].scheduler_cond);
+    free(threads);
+    free(args);
     free(coders);
     destroy_dongles(dongles, sim.nb_coders);
     free(dongles);

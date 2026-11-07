@@ -2,7 +2,7 @@ NAME = codexion
 CC = cc
 FLAGS = -Wall -Wextra -Werror -pthread
 SRC = parsing.c main.c display.c coders_utils.c init_mutex.c \
-		dongles_utils.c queue_utils.c schedule_utils.c scheduler_org.c
+		dongles_utils.c queue_utils.c schedule_utils.c scheduler_org.c routine.c
 
 OBJ = $(SRC:.c=.o)
 
@@ -17,9 +17,9 @@ $(NAME):$(OBJ)
 clean:
 	@rm -f $(OBJ)
 
-fclean: clean
+fclean:
 	@rm -f $(NAME)
 
-re: fclean all
+re: fclean all clean
 
 .PHONY: clean fclean re all
