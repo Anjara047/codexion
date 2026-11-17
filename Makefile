@@ -1,8 +1,9 @@
 NAME = codexion
 CC = cc
 FLAGS = -Wall -Wextra -Werror -pthread
-SRC = parsing.c main.c display.c coders_utils.c init_mutex.c \
-		dongles_utils.c queue_utils.c schedule_utils.c scheduler_org.c routine.c
+SRC = src/parsing.c src/main.c src/display.c src/coders_utils.c src/init_mutex.c \
+		src/dongles_utils.c src/queue_utils.c src/schedule_utils.c src/scheduler_org.c \
+		src/routine.c src/monitoring.c
 
 OBJ = $(SRC:.c=.o)
 
