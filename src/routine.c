@@ -6,7 +6,7 @@
 /*   By: tsanjara <tsanjara@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/18 22:28:58 by tsanjara          #+#    #+#             */
-/*   Updated: 2026/11/23 08:50:47 by tsanjara         ###   ########.fr       */
+/*   Updated: 2026/11/23 10:55:16 by tsanjara         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,6 +62,25 @@ void	refactor(t_sim *sim, t_coder *coder)
 	sleeping(sim->tm_rfctr);
 }
 
+int	coder_cycle(t_sim *sim, t_coder *coder, int *nb_compiles)
+{
+	if (add_queue(sim, coder) != 0)
+		return (1);
+	waiting_selection(sim, coder);
+	if (getting_stop(sim))
+		return (1);
+	compiles(sim, coder);
+	if (getting_stop(sim))
+		return (1);
+	(*nb_compiles)++;
+	realising_dongle(sim, coder);
+	if (sim->tm_cmp_rqrd <= *nb_compiles)
+		return (1);
+	debug(sim, coder);
+	refactor(sim, coder);
+	return (0);
+}
+
 void	*routine(void *args)
 {
 	t_sim	*sim;
@@ -75,20 +94,8 @@ void	*routine(void *args)
 	nb_compiles = 0;
 	while (sim->tm_cmp_rqrd > nb_compiles)
 	{
-		if (add_queue(sim, coder) != 0)
-			return (NULL);
-		waiting_selection(sim, coder);
-		if (getting_stop(sim))
+		if (coder_cycle(sim, coder, &nb_compiles))
 			break ;
-		compiles(sim, coder);
-		if (getting_stop(sim))
-			break ;
-		nb_compiles++;
-		realising_dongle(sim, coder);
-		if (sim->tm_cmp_rqrd <= nb_compiles)
-			break ;
-		debug(sim, coder);
-		refactor(sim, coder);
 	}
 	return (NULL);
 }

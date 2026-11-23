@@ -3,8 +3,8 @@ CC = cc
 FLAGS = -Wall -Wextra -Werror -pthread
 SRC = src/parsing.c src/main.c src/display.c src/coders_utils.c src/init_mutex.c \
 		src/dongles_utils.c src/queue_utils.c src/schedule_utils.c src/scheduler_org.c \
-		src/routine.c src/monitoring.c src/dongle_reservation.c src/cooldown_utils.c\
-		src/codexion.c
+		src/routine.c src/monitoring.c src/dongle_reservation.c src/cooldown_utils.c \
+		src/codexion.c src/init_mutex_utils.c src/thread_utils.c
 
 OBJ = $(SRC:.c=.o)
 

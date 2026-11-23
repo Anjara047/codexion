@@ -4,50 +4,55 @@
 
 ## DESCRIPTION
 
-This project is part of 42 Curriculum  in the common core, it is based on C language that simulates a group of coders sharing limited dongles in each side of each coders, by means the numbers of coders is the same as the number of dongles
+Codexion is a concurrency project developed as part of the 42 Common Core curriculum using the C programming language.
 
-routine:  
-Each coders follows the following routine:  
-&emsp; * compiles  
-&emsp; * debugg  
-&emsp; * refactores  
-It requires two implementation in general:  
-&emsp;* FIFO (First In, First Out): The coders which is first in the heap will process the routine first, and the out so that  the next coders in the heap will compile and always like that untill the required parameters will have finished what they need.  
-&emsp; * EDF(Earliest Deadline First): Each coders with the earliest deadline in the coders will process first, and after that out from the heap and the next coders follows the same routine.
+It simulates a group of coders sharing a limited number of resources, called **dongles**. Each coder requires two adjacent dongles to perform a compilation.
+
+The number of dongles is equal to the number of coders.
+
+### Routine
+
+Each coder follows the same routine:
+
+- **Compile:** Compile their work using two adjacent dongles.
+- **Debug:** Debug their code.
+- **Refactor:** Refactor their code before starting another compilation cycle.
+
+### Scheduling Algorithms
+
+The project implements two scheduling algorithms:
+
+- **FIFO (First In, First Out):** Coders are selected according to their arrival order in the scheduling queue. The first coder in the queue is selected before the next one.
+
+- **EDF (Earliest Deadline First):** Coders are selected according to their earliest compilation deadline. The coder with the earliest deadline is selected first.
 
 ### GOAL
-&emsp; In general, the main of this project is to manage multiple coders that shared the same ressources(we say dongles here) while and ensures that each coders can compile their work without reaching the burnout
 
-`BURNOUT`: The state of a coder who fails to start a new compilation within the allotted time because they cannot access the required resources in time
+The main goal of this project is to manage multiple concurrent coders sharing limited resources while ensuring that they can complete their compilation cycles without reaching burnout.
+
+**BURNOUT:** The state of a coder who fails to start a new compilation within the allotted time because they cannot access the required resources in time.
 
 ## INSTRUCTIONS
 
-There is already Makefile in the root of the repository to facilatate all the work to compile the program, so just the user only needs to to run the following command to run the code.  
+A `Makefile` is provided at the root of the repository to simplify compilation and execution.
 
-`make`: to compile the program at the very first the user want to check the program
-`make re`: to recompile all the program and create the executable and remove all the files.o just newly created.
-`make clean`: remove all the files.o
-`make fclean`: remove the executable files that contains the binary
+The following commands are available:
 
-./codexion 5 800 200 100 100 1 0 fifo
-./codexion 5 800 200 100 100 2 0 fifo
-./codexion 5 800 200 100 100 3 0 fifo
+- `make`: Compile the project and generate the executable.
+- `make re`: Recompile the project from scratch.
+- `make clean`: Remove object files (`.o`).
+- `make fclean`: Remove object files and the executable.
 
-./codexion 2 2000 200 100 100 2 0 fifo
-./codexion 3 2000 200 100 100 2 0 fifo
-./codexion 4 2000 200 100 100 2 0 fifo
-./codexion 5 2000 200 100 100 2 0 fifo
-./codexion 7 2000 200 100 100 2 0 fifo
+This project requires eight argument, these must must be present during the execution so that it can never compile if one of them is missing
+So after running the project via `make`, the project can be tested with:  
+&emsp;&emsp; `./codexion number_of_coders time_to_burnout time_to_compile time_to_debug time_to_refactor number_of_compiles_required dongle_cooldown scheduler`
 
-./codexion 5 2000 200 100 100 2 50 fifo
-./codexion 5 2000 200 100 100 2 200 fifo
-./codexion 5 2000 200 100 100 2 500 fifo
-
-./codexion 1 200 100 100 100 2 0 fifo
-./codexion 5 100 200 100 100 2 0 fifo
-./codexion 5 250 200 100 100 2 0 fifo
-./codexion 5 800 200 100 100 2 0 fifo
-
-./codexion 5 800 200 100 100 2 0 edf
-./codexion 5 800 200 100 100 2 100 edf
-./codexion 7 1200 200 100 100 3 50 edf
+- `number_of_coders`: the numbers of coders needed during the compilation, it is really important to remind that the number of coders cannot be neither invalid integer, nor 0 nor 1
+&emsp; 0 means no coder to compile
+&emsp; 1 means that there won't be 2 dongles required for the compilation
+- `time_to_burnout`: the maximum time(in millisiconds) a coder can wait before starting a new compilation. If the coder fails to start compiling within this time limit, they reach the `BURNOUT` state
+- `time_to_compile`: the time to compile for each coders during compilation
+- `time_to_debug`: the time required to debbugging for each coders
+- `time_to_refactor`: the time that is needed to refactoring for each coder as well
+- `time_to_compiles_required`: each coders can compile multiple times as much as the required number of compilation
+- `dongle_cooldown`: the minimun time a dongle must remain unavailable after realeased by the coder before it can be acquired again by another coder

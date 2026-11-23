@@ -12,37 +12,37 @@
 
 #include "codexion.h"
 
-int	run_simulation(t_sim *sim, pthread_t *threads, t_args *args)
-{
-	pthread_t	scheduler_thread;
-	pthread_t	monitor_thread;
-	int			i;
-
-	if (pthread_create(&scheduler_thread, NULL, scheduler_routine, sim) != 0)
-		return (1);
-	if (pthread_create(&monitor_thread, NULL, monitoring_routine, sim) != 0)
-		return (1);
-	i = 0;
-	while (i < sim->nb_coders)
-	{
-		args[i].sim = sim;
-		args[i].coder = &sim->coders[i];
-		if (pthread_create(&threads[i], NULL, routine, &args[i]) != 0)
-			return (1);
-		i++;
-	}
-	i = 0;
-	while (i < sim->nb_coders)
-	{
-		pthread_join(threads[i], NULL);
-		i++;
-	}
-	if (all_coders_finished(sim) && !getting_stop(sim))
-		stop_setting(sim);
-	pthread_join(scheduler_thread, NULL);
-	pthread_join(monitor_thread, NULL);
-	return (0);
-}
+//int	run_simulation(t_sim *sim, pthread_t *threads, t_args *args)
+//{
+//	pthread_t	scheduler_thread;
+//	pthread_t	monitor_thread;
+//	int			i;
+//
+//	if (pthread_create(&scheduler_thread, NULL, scheduler_routine, sim) != 0)
+//		return (1);
+//	if (pthread_create(&monitor_thread, NULL, monitoring_routine, sim) != 0)
+//		return (1);
+//	i = 0;
+//	while (i < sim->nb_coders)
+//	{
+//		args[i].sim = sim;
+//		args[i].coder = &sim->coders[i];
+//		if (pthread_create(&threads[i], NULL, routine, &args[i]) != 0)
+//			return (1);
+//		i++;
+//	}
+//	i = 0;
+//	while (i < sim->nb_coders)
+//	{
+//		pthread_join(threads[i], NULL);
+//		i++;
+//	}
+//	if (all_coders_finished(sim) && !getting_stop(sim))
+//		stop_setting(sim);
+//	pthread_join(scheduler_thread, NULL);
+//	pthread_join(monitor_thread, NULL);
+//	return (0);
+//}
 
 int	initialize_simulation(t_sim *sim)
 {

@@ -17,7 +17,7 @@ void	parameters_valid(char *param, int *dest)
 	int			i;
 	long long	num_param;
 
-	if (!dest)
+	if (!param || !dest)
 		return ;
 	*dest = -1;
 	i = 0;
@@ -36,6 +36,49 @@ void	parameters_valid(char *param, int *dest)
 	*dest = (int)num_param;
 }
 
+int	valid_scheduler(char *args, t_sim *sim)
+{
+	if (strcmp(args, "fifo") == 0)
+		sim->scheduler = FIFO;
+	else if (strcmp(args, "edf") == 0)
+		sim->scheduler = EDF;
+	else
+	{
+		print("scheduler must be fifo or edf\n");
+		return (0);
+	}
+	return (1);
+}
+
+int	valid_arguments_number(char **argv, t_sim *sim)
+{
+	parameters_valid(argv[1], &sim->nb_coders);
+	if (sim->nb_coders <= 0)
+	{
+		print("number_of_coders must be a valid integer or non 0\n");
+		return (0);
+	}
+	parameters_valid(argv[2], &sim->tm_b_out);
+	if (sim->tm_b_out < 0)
+		return (print("time_to_burnout must be a valid integer\n"), 0);
+	parameters_valid(argv[3], &sim->tm_cmpl);
+	if (sim->tm_cmpl < 0)
+		return (print("time_to_compile must be a valid integer\n"), 0);
+	parameters_valid(argv[4], &sim->tm_dbg);
+	if (sim->tm_dbg < 0)
+		return (print("time_to_debug must be a valid integer\n"), 0);
+	parameters_valid(argv[5], &sim->tm_rfctr);
+	if (sim->tm_rfctr < 0)
+		return (print("time_to_refactor must be a valid integer\n"), 0);
+	parameters_valid(argv[6], &sim->tm_cmp_rqrd);
+	if (sim->tm_cmp_rqrd < 0)
+		return (print("time_to_compare must be a valid integer\n"), 0);
+	parameters_valid(argv[7], &sim->cooldown);
+	if (sim->cooldown < 0)
+		return (print("cooldown must be a valid integer\n"), 0);
+	return (1);
+}
+
 int	validate_paramaters(int argc, char **argv, t_sim *sim)
 {
 	if (argc != 9)
@@ -43,58 +86,11 @@ int	validate_paramaters(int argc, char **argv, t_sim *sim)
 		print("Usage: ./codexion number_of_coders time_to_burnout "
 			"time_to_compile time_to_debug time_to_refactor "
 			"number_of_compiles_required dongle_cooldown scheduler\n");
-		exit(0);
+		return (0);
 	}
-	parameters_valid(argv[1], &sim->nb_coders);
-	if (sim->nb_coders <= 0)
-	{
-		print("number_of_coders must be a valid integer or non 0\n");
+	if (!valid_arguments_number(argv, sim))
 		exit(0);
-	}
-	parameters_valid(argv[2], &sim->tm_b_out);
-	if (sim->tm_b_out < 0)
-	{
-		print("time_to_burnout must be a valid integer\n");
+	if (!valid_scheduler(argv[8], sim))
 		exit(0);
-	}
-	parameters_valid(argv[3], &sim->tm_cmpl);
-	if (sim->tm_cmpl < 0)
-	{
-		print("time_to_compile must be a valid integer\n");
-		exit(0);
-	}
-	parameters_valid(argv[4], &sim->tm_dbg);
-	if (sim->tm_dbg < 0)
-	{
-		print("time_to_debug must be a valid integer\n");
-		exit(0);
-	}
-	parameters_valid(argv[5], &sim->tm_rfctr);
-	if (sim->tm_rfctr < 0)
-	{
-		print("time_to_refactor must be a valid integer\n");
-		exit(0);
-	}
-	parameters_valid(argv[6], &sim->tm_cmp_rqrd);
-	if (sim->tm_cmp_rqrd < 0)
-	{
-		print("time_to_compare must be a valid integer\n");
-		exit(0);
-	}
-	parameters_valid(argv[7], &sim->cooldown);
-	if (sim->cooldown < 0)
-	{
-		print("cooldown must be a valid integer\n");
-		exit(0);
-	}
-	if (strcmp(argv[8], "fifo") == 0)
-		sim->scheduler = FIFO;
-	else if (strcmp(argv[8], "edf") == 0)
-		sim->scheduler = EDF;
-	else
-	{
-		print("scheduler must be fifo or edf\n");
-		exit(0);
-	}
 	return (1);
 }

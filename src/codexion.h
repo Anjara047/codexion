@@ -6,7 +6,7 @@
 /*   By: tsanjara <tsanjara@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/11/05 18:24:56 by tsanjara          #+#    #+#             */
-/*   Updated: 2026/11/22 22:52:34 by tsanjara         ###   ########.fr       */
+/*   Updated: 2026/11/23 09:56:05 by tsanjara         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -171,5 +171,20 @@ int					allocate_thread_data(pthread_t **threads, t_args **args,
 void				cleanup_simulation(t_sim *sim);
 int					all_coders_finished(t_sim *sim);
 t_coder				*try_select_coder(t_sim *sim);
+void				destroy_first_mutexes(t_sim *sim);
+void				destroy_second_mutexes(t_sim *sim);
+int					init_first_mutexes(t_sim *sim);
+void				destroy_first_mutexes_partial(t_sim *sim);
+int					init_second_mutexes(t_sim *sim);
+void				destroy_second_mutexes_partial(t_sim *sim);
+int					init_conditions(t_sim *sim);
+void				destroy_conditions(t_sim *sim);
+int					create_service_threads(t_sim *sim, pthread_t *scheduler,
+						pthread_t *monitor);
+int					create_coder_threads(t_sim *sim, pthread_t *threads,
+						t_args *args, int *created);
+void				join_coder_threads(pthread_t *threads, int created);
+void				join_service_threads(pthread_t scheduler,
+						pthread_t monitor);
 
 #endif
