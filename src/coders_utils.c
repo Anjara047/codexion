@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   coders_utils.c                                     :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: tsanjara <tsanjara@student.42antananarivo  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/11/18 22:28:58 by tsanjara          #+#    #+#             */
+/*   Updated: 2026/11/23 08:52:54 by tsanjara         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "codexion.h"
 
 t_coder	*allocate_coders(int nb_coders)
@@ -36,30 +48,41 @@ int	create_coders(t_coder *coders, int nb_coders, t_time start_time)
 	return (0);
 }
 
-void coder_selection(t_sim *sim, t_coder *coder)
+void	coder_selection(t_sim *sim, t_coder *coder)
 {
-    pthread_mutex_lock(&sim->scheduler_mutex);
-    sim->acquired = 0;
-    coder->selected = 1;
-	printf("SELC: %d\n", coder->coder_id);
-    pthread_cond_signal(&coder->scheduler_cond);
-    while (!sim->acquired && !getting_stop(sim))
-    {
-        pthread_cond_wait(&sim->scheduler_cond,
-            &sim->scheduler_mutex);
-    }
-    pthread_mutex_unlock(&sim->scheduler_mutex);
+	pthread_mutex_lock(&sim->scheduler_mutex);
+	pthread_cond_signal(&coder->scheduler_cond);
+	pthread_mutex_unlock(&sim->scheduler_mutex);
 }
 
-void destroy_coders(t_coder *coders, int nb_coders)
+void	destroy_coders(t_coder *coders, int nb_coders)
 {
-	int i;
+	int	i;
 
 	i = 0;
-	while(i < nb_coders)
+	while (i < nb_coders)
 	{
 		pthread_cond_destroy(&coders[i].scheduler_cond);
 		i++;
 	}
 	free(coders);
+}
+
+t_coder	*find_coder_available(t_sim *sim)
+{
+	int	i;
+	int	selected;
+
+	i = 0;
+	while (i < sim->nb_coders)
+	{
+		pthread_mutex_lock(&sim->scheduler_mutex);
+		selected = sim->coders[i].selected;
+		pthread_mutex_unlock(&sim->scheduler_mutex);
+		if (!selected && is_first_in_both_queues(sim, &sim->coders[i])
+			&& dongles_are_available(sim, &sim->coders[i]))
+			return (&sim->coders[i]);
+		i++;
+	}
+	return (NULL);
 }

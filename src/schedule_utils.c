@@ -1,118 +1,100 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   schedule_utils.c                                   :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: tsanjara <tsanjara@student.42antananarivo  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/11/18 22:28:58 by tsanjara          #+#    #+#             */
+/*   Updated: 2026/11/23 08:57:25 by tsanjara         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "codexion.h"
 
-static long long remaining_cooldown(t_sim *sim, t_dongle *dongle)
+int	request_can_proceed(t_sim *sim, t_coder *coder)
 {
-    t_time      current;
-    long long   elapsed_time;
+	int	left;
+	int	right;
+	int	available;
 
-    if (dongle->last_release.start_time.tv_sec == 0
-        && dongle->last_release.start_time.tv_nsec == 0)
-        return(0);
-    clock_gettime(CLOCK_MONOTONIC, &current.start_time);
-    elapsed_time = timesatamps_ms(current) - timesatamps_ms(dongle->last_release);
-    if(elapsed_time >= sim->cooldown)
-        return (0);
-    return(sim->cooldown - elapsed_time);
+	if (sim->nb_coders == 1)
+		return (0);
+	left = get_first_dongle(coder->coder_id);
+	right = get_second_dongle(coder->coder_id, sim->nb_coders);
+	pthread_mutex_lock(&sim->dongles_mutex);
+	available = (sim->dongles[left].state == AVAILABLE
+			&& sim->dongles[right].state == AVAILABLE && remaining_cooldown(sim,
+				&sim->dongles[left]) == 0 && remaining_cooldown(sim,
+				&sim->dongles[right]) == 0);
+	pthread_mutex_unlock(&sim->dongles_mutex);
+	return (available);
 }
 
-int trying_to_take_dongles(t_sim *sim, t_coder *coder)
+int	trying_to_take_dongles(t_sim *sim, t_coder *coder)
 {
-    int                 left;
-    int                 right;
-    long long           left_wait;
-    long long           right_wait;
-    long long           wait_time;
-    struct timespec     timeout;
-
-    left = get_first_dongle(coder->coder_id);
-    right = get_second_dongle(coder->coder_id, sim->nb_coders);
-    if (sim->nb_coders == 1)
-    {
-        pthread_mutex_lock(&sim->dongles_mutex);
-        while (!getting_stop(sim))
-            pthread_cond_wait(&sim->dongles_cond, &sim->dongles_mutex);
-        pthread_mutex_unlock(&sim->dongles_mutex);
-        return (1);
-    }
-    pthread_mutex_lock(&sim->dongles_mutex);
-    while (!getting_stop(sim))
-    {
-        if (sim->dongles[left].state == UNAVAILABLE
-            || sim->dongles[right].state == UNAVAILABLE)
-            pthread_cond_wait(&sim->dongles_cond,
-                &sim->dongles_mutex);
-        else
-        {
-            left_wait = remaining_cooldown(sim, &sim->dongles[left]);
-            right_wait = remaining_cooldown(sim, &sim->dongles[right]);
-            if (left_wait > right_wait)
-                wait_time = left_wait;
-            else
-                wait_time = right_wait;
-            if (wait_time == 0)
-                break;
-            clock_gettime(CLOCK_REALTIME, &timeout);
-            timeout.tv_sec += wait_time / 1000;
-            timeout.tv_nsec += (wait_time % 1000) * 1000000;
-            if (timeout.tv_nsec >= 1000000000)
-            {
-                timeout.tv_sec++;
-                timeout.tv_nsec -= 1000000000;
-            }
-            pthread_cond_timedwait(&sim->dongles_cond,
-                &sim->dongles_mutex, &timeout);
-        }
-    }
-    if (getting_stop(sim))
-    {
-        pthread_mutex_unlock(&sim->dongles_mutex);
-        return (1);
-    }
-    sim->dongles[left].state = UNAVAILABLE;
-    sim->dongles[right].state = UNAVAILABLE;
-    pthread_mutex_unlock(&sim->dongles_mutex);
-    pthread_mutex_lock(&sim->log_mutex);
-    log_statement(sim, coder, "has taken a dongle");
-    log_statement(sim, coder, "has taken a dongle");
-    pthread_mutex_unlock(&sim->log_mutex);
-    pthread_mutex_lock(&sim->scheduler_mutex);
-    sim->acquired = 1;
-    pthread_cond_signal(&sim->scheduler_cond);
-    pthread_mutex_unlock(&sim->scheduler_mutex);
-    return (0);
+	pthread_mutex_lock(&sim->log_mutex);
+	log_statement(sim, coder, "has taken a dongle");
+	if (sim->nb_coders > 1)
+		log_statement(sim, coder, "has taken a dongle");
+	pthread_mutex_unlock(&sim->log_mutex);
+	return (0);
 }
 
-void realising_dongle(t_sim *sim, t_coder *coder)
+void	realising_dongle(t_sim *sim, t_coder *coder)
 {
-    int left;
-    int right;
+	int	left;
+	int	right;
 
-    left = get_first_dongle(coder->coder_id);
-    right = get_second_dongle(coder->coder_id, sim->nb_coders);
-    pthread_mutex_lock(&sim->dongles_mutex);
-    sim->dongles[left].state = AVAILABLE;
-    sim->dongles[right].state = AVAILABLE;
-    clock_gettime(CLOCK_MONOTONIC,
-        &sim->dongles[left].last_release.start_time);
-    clock_gettime(CLOCK_MONOTONIC,
-        &sim->dongles[right].last_release.start_time);
-    pthread_cond_signal(&sim->dongles_cond);
-    pthread_mutex_unlock(&sim->dongles_mutex);
+	left = get_first_dongle(coder->coder_id);
+	right = get_second_dongle(coder->coder_id, sim->nb_coders);
+	pthread_mutex_lock(&sim->dongles_mutex);
+	sim->dongles[left].state = AVAILABLE;
+	sim->dongles[right].state = AVAILABLE;
+	clock_gettime(CLOCK_MONOTONIC, &sim->dongles[left].last_release.start_time);
+	clock_gettime(CLOCK_MONOTONIC,
+		&sim->dongles[right].last_release.start_time);
+	pthread_mutex_unlock(&sim->dongles_mutex);
+	pthread_mutex_lock(&sim->queue_mutex);
+	pthread_cond_broadcast(&sim->queue_cond);
+	pthread_mutex_unlock(&sim->queue_mutex);
 }
 
-void    *scheduler_routine(void *args)
+void	dispatch_batch(t_sim *sim, t_coder *first_coder)
 {
-    t_sim       *sim;
-    t_request   request;
+	t_coder	*coder;
+	int		i;
+	int		selected;
 
-    sim = (t_sim *)args;
-    //printf("Scheduler started\n");
-    while (!getting_stop(sim))
-    {
-        if (queue_pop(sim, &request) != 0)
-            break;
-        //printf("Scheduler selected Coder %d\n", request.coder->coder_id);
-        coder_selection(sim, request.coder);
-    }
-    return (NULL);
+	coder = first_coder;
+	while (coder != NULL)
+	{
+		trying_to_take_dongles(sim, coder);
+		coder = try_select_coder(sim);
+	}
+	i = 0;
+	while (i < sim->nb_coders)
+	{
+		pthread_mutex_lock(&sim->scheduler_mutex);
+		selected = sim->coders[i].selected;
+		pthread_mutex_unlock(&sim->scheduler_mutex);
+		if (selected)
+			coder_selection(sim, &sim->coders[i]);
+		i++;
+	}
+}
+
+void	*scheduler_routine(void *args)
+{
+	t_sim		*sim;
+	t_request	request;
+
+	sim = (t_sim *)args;
+	while (!getting_stop(sim))
+	{
+		if (queue_pop(sim, &request) != 0)
+			break ;
+		dispatch_batch(sim, request.coder);
+	}
+	return (NULL);
 }
